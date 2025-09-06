@@ -1,0 +1,1075 @@
+Main.cpp
+
+#include <iostream>
+#include "BoolVector.h"
+#include "BoolMatrix.h"
+
+void main()
+{
+	BoolMatrix BM1(2,10);
+	BM1.Scan(2,10);
+	BM1.Print();
+	BoolMatrix BM2 = BM1;
+	BM2.Invert(4, 2, 2);
+	//~BM2;
+	//BM2.Print();
+
+	//BoolMatrix C = BM1 & BM2;
+	//C.Print();
+
+	std::cout << BM2;
+}
+
+BoolVector.h
+
+#pragma once
+#include <iostream>
+
+typedef unsigned char UC;
+
+class BoolVector
+{
+public:
+	UC* bv;
+	int n, m;
+public:
+	BoolVector();
+	BoolVector(int n1);
+	BoolVector(const char* s);
+	BoolVector(const char* s, int n1);
+	BoolVector(const BoolVector&);
+	BoolVector & operator = (const BoolVector&);
+	~BoolVector() { delete[]bv; }
+
+	void Scan(int);
+	void Print();
+	int Weight();
+	UC operator[] (int);
+
+	bool operator== (BoolVector& b);
+	bool operator!= (BoolVector& b);
+	bool operator< (BoolVector& b);
+	bool operator> (BoolVector& b);
+
+	BoolVector operator & (const BoolVector& b);
+	BoolVector& operator &=(const BoolVector& b);
+	BoolVector operator |(BoolVector& b);
+	BoolVector& operator |=(BoolVector& b);
+	BoolVector operator ^(BoolVector& b);
+	BoolVector& operator ^=(BoolVector& b);
+	BoolVector operator ~();
+
+	BoolVector operator <<(int x);
+	BoolVector& operator <<=(int x);
+	BoolVector operator >>(int x);
+	BoolVector& operator >>=(int x);
+
+	BoolVector SetUp1(int pos);
+	BoolVector SetUp0(int pos);
+	BoolVector Invert(int pos);
+
+	BoolVector SetUp1(int kol, int pos);
+	BoolVector SetUp0(int kol, int pos);
+	BoolVector Invert(int kol, int pos);
+
+	friend std::ostream& operator<< (std::ostream& r, BoolVector& V);
+	friend std::istream& operator>> (std::istream& r, BoolVector& V);
+};
+
+BoolVector.cpp
+
+#define _CRT_SECURE_NO_WARNINGS  
+#include <iostream>
+#include <cstring>
+#include "BoolVector.h"
+
+BoolVector::BoolVector()
+{
+	bv = nullptr;
+	n = 0;
+	m = 0;
+}
+
+BoolVector::BoolVector(int n1)
+{
+	n = n1;
+	if (!(n % 8)) m = n / 8;
+	else m = n / 8 + 1;
+	bv = new UC[m];
+	for (int i = 0; i < m; i++)
+	{
+		bv[i] = 0b00000000;
+	}
+}
+
+BoolVector::BoolVector(const char* s)
+{
+	n = strlen(s);
+	if (!(n % 8)) m = n / 8;
+	else m = n / 8 + 1;
+	bv = new UC[m];
+	int k = n - 1;
+	int r;
+	int flag = 1;
+	for (int i = 0; i < m; i++)
+	{
+		r = 0;
+		while (r != 8)
+		{
+			if ((s[k] == '1') && (flag))
+			{
+				bv[i] |= (1 << r);
+			}
+			else if ((s[k] == '0') && (flag))
+			{
+				bv[i] &= ~(1 << r);
+			}
+			else if (!flag)
+			{
+				bv[i] &= ~(1 << r);
+			}
+			r++;
+			if (k != 0) k--;
+			else flag = 0;
+		}
+	}
+}
+
+BoolVector::BoolVector(const char* s, int n1)
+{
+	if (strlen(s) < n1)
+	{
+		int newlen = n1 + 1;
+		char* strnull = new char[newlen];
+		memset(strnull, '0', n1 - strlen(s));
+		strcpy(strnull + (n1 - strlen(s)), s);
+		strnull[newlen] = '\0';
+		s = strnull;
+		n = n1;
+	}
+	else if (strlen(s) > n1)
+	{
+		int h = n1 - 1;
+		char* newS = new char[n1];
+		for (int i = strlen(s) - 1; i >= (strlen(s) - n1); i--)
+		{
+			newS[h] = s[i];
+			h--;
+		}
+		newS[n1] = '\0';
+		s = newS;
+		n = n1;
+	}
+	else
+	{
+		n = n1;
+	}
+
+
+	delete[]bv;
+	if (!(n % 8)) m = n / 8;
+	else m = n / 8 + 1;
+	bv = new UC[m];
+	int k = n - 1;
+	int r;
+	int flag = 1;
+	for (int i = 0; i < m; i++)
+	{
+		r = 0;
+		while (r != 8)
+		{
+			if ((s[k] == '1') && (flag))
+			{
+				bv[i] |= (1 << r);
+			}
+			else if ((s[k] == '0') && (flag))
+			{
+				bv[i] &= ~(1 << r);
+			}
+			else if (!flag)
+			{
+				bv[i] &= ~(1 << r);
+			}
+			r++;
+			if (k != 0) k--;
+			else flag = 0;
+		}
+	}
+}
+
+BoolVector::BoolVector(const BoolVector& b)
+{
+	n = b.n;
+	m = b.m;
+	bv = new UC[m];
+	for (int byte = 0; byte < m; byte++)
+	{
+		bv[byte] = b.bv[byte];
+	}
+}
+
+BoolVector & BoolVector::operator=(const BoolVector& b)
+{
+	if (this != &b)
+	{
+		delete[]bv;
+		bv = new UC[m = b.m];
+		n = b.n;
+		for (int byte = 0; byte < m; byte++)
+		{
+			bv[byte] = b.bv[byte];
+		}
+	}
+	return *this;
+}
+
+void BoolVector::Scan(int kol)
+{
+	char* s = new char[kol];
+	for (int i = 0; i < kol; i++)
+	{
+		std::cin >> s[i];
+	}
+
+	n = kol;
+	if (!(n % 8)) m = n / 8;
+	else m = n / 8 + 1;
+	bv = new UC[m];
+	int k = n - 1;
+	int r;
+	int flag = 1;
+	for (int i = 0; i < m; i++)
+	{
+		r = 0;
+		while (r != 8)
+		{
+			if ((s[k] == '1') && (flag))
+			{
+				bv[i] |= (1 << r);
+			}
+			else if ((s[k] == '0') && (flag))
+			{
+				bv[i] &= ~(1 << r);
+			}
+			else if (!flag)
+			{
+				bv[i] &= ~(1 << r);
+			}
+			r++;
+			if (k != 0) k--;
+			else flag = 0;
+		}
+	}
+}
+
+void BoolVector::Print()
+{
+	for (int byte = m - 1; byte >= 0; byte--)
+	{
+		for (int i = 7; i >= 0; i--) {
+			std::cout << ((bv[byte] >> i) & 1);
+		}
+		std::cout << " ";
+		//std::cout << std::endl;
+	}
+	std::cout << std::endl;
+}
+
+int BoolVector::Weight()
+{
+	int count = 0;
+	UC* copyBV = new UC[m];
+	for (int byte = 0; byte < m; byte++)
+	{
+		copyBV[byte] = bv[byte];
+		while (copyBV[byte])
+		{
+			count += copyBV[byte] & 1;
+			copyBV[byte] >>= 1;
+		}
+	}
+	return count;
+}
+
+UC BoolVector::operator [](int x)
+{
+	int posByte = x / 8;
+	int posBit = x % 8;
+	//std::cout << ((bv[posByte] >> posBit) & 1) << std::endl;
+	return ((bv[posByte] >> posBit) & 1);
+}
+
+bool BoolVector::operator ==(BoolVector& b)
+{
+	if (m == b.m)
+	{
+		int flag = 1;
+		int count = 0;
+		for (int byte = 0; (byte < m) && flag; byte++)
+		{
+			if (bv[byte] == b.bv[byte]) count++;
+			else { flag = 0; };
+		}
+		if (count == m) return true;
+	}
+	return false;
+}
+
+bool BoolVector::operator !=(BoolVector& b)
+{
+	//if (this == &b) return false;
+	//else return true;
+	return !(*this == b);
+}
+
+bool BoolVector::operator <(BoolVector& b)
+{
+	if (m == b.m)
+	{
+		int flag = 1;
+		int count = 0;
+		for (int byte = 0; (byte < m) && flag; byte++)
+		{
+			if (bv[byte] <= b.bv[byte]) count++;
+			else { flag = 0; };
+		}
+		if (count == m) return true;
+	}
+	return false;
+}
+
+bool BoolVector::operator >(BoolVector& b)
+{
+	if (m == b.m)
+	{
+		int flag = 1;
+		int count = 0;
+		for (int byte = 0; (byte < m) && flag; byte++)
+		{
+			if (bv[byte] >= b.bv[byte]) count++;
+			else { flag = 0; };
+		}
+		if (count == m) return true;
+	}
+	return false;
+}
+
+BoolVector BoolVector::operator &(const BoolVector& b)
+{
+	BoolVector res;
+	res.n = std::min(n, b.n);
+	res.m = std::min(m, b.m);
+	res.bv = new UC[res.m];
+
+	for (int byte = 0; byte < res.m; byte++)
+	{
+		res.bv[byte] = (bv[byte] & b.bv[byte]);
+	}
+
+	return res;
+}
+
+BoolVector& BoolVector::operator &=(const BoolVector& b)
+{
+	UC* save = new UC[m];
+	for (int byte = 0; byte < m; byte++)
+	{
+		save[byte] = bv[byte];
+	}
+	delete[] bv;
+	m = std::min(m, b.m);
+	n = std::min(n, b.n);
+
+	for (int byte = 0; byte < m; byte++)
+	{
+		save[byte] &= b.bv[byte];
+	}
+	bv = save;
+
+	//*this = *this & b;
+	return *this;
+}
+
+BoolVector BoolVector::operator |(BoolVector& b)
+{
+	BoolVector res;
+	if (m > b.m)
+	{
+		res.bv = new UC[m];
+		for (int byte = 0; byte < m; byte++)
+		{
+			res.bv[byte] = bv[byte];
+		}
+	}
+	else
+	{
+		res.bv = new UC[b.m];
+		for (int byte = 0; byte < b.m; byte++)
+		{
+			res.bv[byte] = b.bv[byte];
+		}
+	}
+	res.n = std::max(n, b.n);
+	res.m = std::max(m, b.m);
+
+	for (int byte = 0; byte < (std::min(m, b.m)); byte++)
+	{
+		res.bv[byte] = (bv[byte] | b.bv[byte]);
+	}
+
+	return res;
+}
+
+BoolVector& BoolVector::operator |=(BoolVector& b)
+{
+	UC* save;
+	if (m > b.m)
+	{
+		save = new UC[m];
+		for (int byte = 0; byte < m; byte++)
+		{
+			save[byte] = bv[byte];
+		}
+
+		for (int byte = 0; byte < (std::min(m, b.m)); byte++)
+		{
+			save[byte] |= b.bv[byte];
+		}
+	}
+	else
+	{
+		save = new UC[b.m];
+		for (int byte = 0; byte < b.m; byte++)
+		{
+			save[byte] = b.bv[byte];
+		}
+
+		for (int byte = 0; byte < (std::min(m, b.m)); byte++)
+		{
+			save[byte] |= bv[byte];
+		}
+	}
+
+	n = std::max(n, b.n);
+	m = std::max(m, b.m);
+	bv = save;
+
+	//*this = *this | b;
+	return *this;
+}
+
+BoolVector BoolVector::operator ^(BoolVector& b)
+{
+	BoolVector res;
+	if (m > b.m)
+	{
+		res.bv = new UC[m];
+		for (int byte = 0; byte < m; byte++)
+		{
+			res.bv[byte] = bv[byte];
+		}
+	}
+	else
+	{
+		res.bv = new UC[b.m];
+		for (int byte = 0; byte < b.m; byte++)
+		{
+			res.bv[byte] = b.bv[byte];
+		}
+	}
+	res.n = std::max(n, b.n);
+	res.m = std::max(m, b.m);
+
+	for (int byte = 0; byte < (std::min(m, b.m)); byte++)
+	{
+		res.bv[byte] = (bv[byte] ^ b.bv[byte]);
+	}
+
+	return res;
+}
+
+BoolVector& BoolVector::operator ^=(BoolVector& b)
+{
+	UC* save;
+	if (m > b.m)
+	{
+		save = new UC[m];
+		for (int byte = 0; byte < m; byte++)
+		{
+			save[byte] = bv[byte];
+		}
+
+		for (int byte = 0; byte < (std::min(m, b.m)); byte++)
+		{
+			save[byte] ^= b.bv[byte];
+		}
+	}
+	else
+	{
+		save = new UC[b.m];
+		for (int byte = 0; byte < b.m; byte++)
+		{
+			save[byte] = b.bv[byte];
+		}
+
+		for (int byte = 0; byte < (std::min(m, b.m)); byte++)
+		{
+			save[byte] ^= bv[byte];
+		}
+	}
+
+	n = std::max(n, b.n);
+	m = std::max(m, b.m);
+	bv = save;
+
+	//*this = *this ^ b;
+	return *this;
+}
+
+BoolVector BoolVector::operator ~()
+{
+	for (int i = 0; i < n; i++)
+	{
+		int posByte = i / 8;
+		int posBit = i % 8;
+		if ((bv[posByte] & (1 << posBit)) == 0) { bv[posByte] |= (1 << posBit); }
+		else { bv[posByte] &= ~(1 << posBit); }
+	}
+	return *this;
+}
+
+BoolVector BoolVector::operator <<(int x)
+{
+	BoolVector res(n);				//res.method (this->method) ((*this).method) (method) this->m  m
+	for (int posBit = 0; posBit < (m * 8 - x); posBit++)
+	{
+		if ((bv[posBit / 8] & (1 << posBit % 8)) == 0) { res.bv[(posBit + x) / 8] &= ~(1 << (posBit + x) % 8); }
+		else { res.bv[(posBit + x) / 8] |= (1 << (posBit + x) % 8); }
+	}
+	return res;
+}
+
+BoolVector& BoolVector::operator <<=(int x)
+{
+	UC* copy = new UC[m];
+
+	for (int posBit = 0; posBit < (0 + x); posBit++)
+	{
+		copy[posBit / 8] &= ~(1 << posBit % 8);
+	}
+
+	for (int posBit = 0; posBit < (m * 8 - x); posBit++)
+	{
+		if ((bv[posBit / 8] & (1 << posBit % 8)) == 0) { copy[(posBit + x) / 8] &= ~(1 << (posBit + x) % 8); }
+		else { copy[(posBit + x) / 8] |= (1 << (posBit + x) % 8); }
+	}
+	bv = copy;
+	return *this;
+}
+
+BoolVector BoolVector::operator >>(int x)
+{
+	BoolVector res(n);
+	for (int posBit = ((m * 8) - 1); posBit >= x; posBit--)
+	{
+		if ((bv[posBit / 8] & (1 << posBit % 8)) == 0) { res.bv[(posBit - x) / 8] &= ~(1 << (posBit - x) % 8); }
+		else { res.bv[(posBit - x) / 8] |= (1 << (posBit - x) % 8); }
+	}
+	return res;
+}
+
+BoolVector& BoolVector::operator >>=(int x)
+{
+	UC* copy = new UC[m];
+
+	for (int posBit = (m * 8 - 1); posBit >= (m * 8 - x); posBit--)
+	{
+		copy[posBit / 8] &= ~(1 << posBit % 8);
+	}
+
+	for (int posBit = ((m * 8) - 1); posBit >= x; posBit--)
+	{
+		if ((bv[posBit / 8] & (1 << posBit % 8)) == 0) { copy[(posBit - x) / 8] &= ~(1 << (posBit - x) % 8); }
+		else { copy[(posBit - x) / 8] |= (1 << (posBit - x) % 8); }
+	}
+	bv = copy;
+	return *this;
+}
+
+BoolVector BoolVector::SetUp1(int pos)
+{
+	bv[pos / 8] |= (1 << pos % 8);
+	return *this;
+}
+
+BoolVector BoolVector::SetUp0(int pos)
+{
+	bv[pos / 8] &= ~(1 << pos % 8);
+	return *this;
+}
+
+BoolVector BoolVector::Invert(int pos)
+{
+	int posByte = pos / 8;
+	int posBit = pos % 8;
+	if ((bv[posByte] & (1 << posBit)) == 0) { bv[posByte] |= (1 << posBit); }
+	else { bv[posByte] &= ~(1 << posBit); }
+	return *this;
+}
+
+BoolVector BoolVector::SetUp1(int kol, int pos)
+{
+	for (int posBit = pos; posBit < (pos + kol); posBit++)
+	{
+		bv[posBit / 8] |= (1 << posBit % 8);
+	}
+	return *this;
+}
+
+
+BoolVector BoolVector::SetUp0(int kol, int pos)
+{
+	for (int posBit = pos; posBit < (pos + kol); posBit++)
+	{
+		bv[posBit / 8] &= ~(1 << posBit % 8);
+	}
+	return *this;
+}
+
+BoolVector BoolVector::Invert(int kol, int pos)
+{
+	for (int posBit = pos; posBit < (pos + kol); posBit++)
+	{
+		if ((bv[posBit / 8] & (1 << posBit % 8)) == 0) { bv[posBit / 8] |= (1 << posBit % 8); }
+		else { bv[posBit / 8] &= ~(1 << posBit % 8); }
+	}
+	return *this;
+}
+
+std::ostream& operator<< (std::ostream& r, BoolVector& V)
+{
+	for (int byte = V.m - 1; byte >= 0; byte--)
+	{
+		for (int i = 7; i >= 0; i--) {
+			r << ((V.bv[byte] >> i) & 1);
+		}
+		//r << std::endl;
+		r << " ";
+	}
+	r << std::endl;
+	return r;
+}
+
+std::istream& operator>> (std::istream& r, BoolVector& V)
+{
+	char* s = new char[V.n];
+	for (int i = 0; i < V.n; i++)
+	{
+		r >> s[i];
+	}
+
+	if (!(V.n % 8)) V.m = V.n / 8;
+	else V.m = V.n / 8 + 1;
+	V.bv = new UC[V.m];
+	int k = V.n - 1;
+	int p;
+	int flag = 1;
+	for (int i = 0; i < V.m; i++)
+	{
+		p = 0;
+		while (p != 8)
+		{
+			if ((s[k] == '1') && (flag))
+			{
+				V.bv[i] |= (1 << p);
+			}
+			else if ((s[k] == '0') && (flag))
+			{
+				V.bv[i] &= ~(1 << p);
+			}
+			else if (!flag)
+			{
+				V.bv[i] &= ~(1 << p);
+			}
+			p++;
+			if (k != 0) k--;
+			else flag = 0;
+		}
+	}
+	return r;
+}
+
+BoolMatrix.h
+
+#pragma once
+#include <iostream>
+#include "BoolVector.h"
+
+class BoolMatrix
+{
+	BoolVector* BM;
+	int m, n;
+
+	int Min(char** s, int m1);
+
+public:
+	BoolMatrix();
+	BoolMatrix(int m1, int n1);
+	BoolMatrix(char** s, int m1);
+	BoolMatrix(const BoolMatrix&B);
+	~BoolMatrix() { delete[]BM; };
+
+	void Scan(int m, int n);
+	void Print();
+
+	BoolMatrix& operator = (const BoolMatrix& B);
+	BoolVector operator[] (int line);
+	bool operator == (BoolMatrix& B);
+	bool operator != (BoolMatrix& B);
+
+	BoolMatrix SetUp1(int pos_m, int pos_n);
+	BoolMatrix SetUp0(int pos_m, int pos_n);
+	BoolMatrix Invert(int pos_m, int pos_n);
+
+	BoolMatrix SetUp1(int kol, int pos_m, int pos_n);
+	BoolMatrix SetUp0(int kol, int pos_m, int pos_n);
+	BoolMatrix Invert(int kol, int pos_m, int pos_n);
+
+	BoolMatrix operator &(BoolMatrix& B);
+	BoolMatrix operator |(BoolMatrix& B);
+	BoolMatrix operator ^(BoolMatrix& B);
+	BoolMatrix& operator &=(BoolMatrix& B);
+	BoolMatrix& operator |=(BoolMatrix& B);
+	BoolMatrix& operator ^=(BoolMatrix& B);
+	BoolMatrix operator ~();
+
+	BoolMatrix ShiftRight(int pos_m, int kol);
+	BoolMatrix ShiftLeft(int pos_m, int kol);
+
+	BoolMatrix ShiftRightEq(int pos_m, int kol);
+	BoolMatrix ShiftLeftEq(int pos_m, int kol);
+
+	BoolVector Conj();
+	BoolVector Disj();
+	BoolVector Xor();
+
+	friend std::ostream& operator << (std::ostream& r, BoolMatrix& B);
+	friend std::istream& operator >> (std::istream& r, BoolMatrix& B);
+
+};
+
+BoolMatrix.cpp
+
+#include <iostream>
+#include "BoolVector.h"
+#include "BoolMatrix.h"
+#include <cstring>
+
+int BoolMatrix::Min(char** s, int m1)
+{
+	int min_line = strlen(s[0]);
+	for (int line = 1; line < m1; line++)
+	{
+		min_line = std::min(min_line, int(strlen(s[line])));
+	}
+	return min_line;
+}
+
+BoolMatrix::BoolMatrix()
+{
+	BM = nullptr;
+	m = 0;	n = 0;
+}
+
+BoolMatrix::BoolMatrix(int m1, int n1)
+{
+	m = m1; n = n1;
+	BM = new BoolVector[m];
+	for (int i = 0; i < m; i++)
+	{
+		BM[i] = BoolVector(n);
+	}
+}
+
+BoolMatrix::BoolMatrix(char **s,int m1)
+{
+	m = m1;
+	n = Min(s, m);
+	BM = new BoolVector[m];
+	for (int i = 0; i < m; i++)
+	{
+		BM[i] = BoolVector(s[i]);
+	}
+}
+
+BoolMatrix::BoolMatrix(const BoolMatrix &B)
+{
+	m = B.m; n = B.n;
+	//delete[] BM;
+	BM = new BoolVector[m];
+	for (int i = 0; i < m; i++)
+	{
+		BM[i] = B.BM[i];
+	}
+}
+
+void BoolMatrix::Scan(int m1, int n1)
+{
+	m = m1; n = n1;
+	BM = new BoolVector[m];
+	for (int i = 0; i < m; i++)
+	{
+		BM[i].Scan(n);
+	}
+}
+
+void BoolMatrix::Print()
+{
+	for (int i = 0; i < m; i++)
+	{
+		BM[i].Print();
+	}
+}
+
+BoolMatrix& BoolMatrix::operator = (const BoolMatrix& B)
+{
+	if (this != &B)
+	{
+		delete[]BM;
+		BM = new BoolVector[m = B.m];
+		n = B.n;
+		for (int i = 0; i < m; i++)
+		{
+			BM[i] = B.BM[i];
+		}
+	}
+	return *this;
+}
+
+BoolVector BoolMatrix::operator [] (int line)
+{
+	return BM[line];
+}
+
+bool BoolMatrix::operator == (BoolMatrix& B)
+{
+	bool F = 1; int line = 0;
+	while (F)
+	{
+		F &= (BM[line] == B.BM[line]);
+	}
+	return F;
+}
+
+bool BoolMatrix::operator != (BoolMatrix& B)
+{
+	return !(*this == B);
+}
+
+BoolMatrix BoolMatrix::SetUp1(int pos_m, int pos_n)
+{
+	BM[pos_m - 1].SetUp1(pos_n);
+	return *this;
+}
+
+BoolMatrix BoolMatrix::SetUp0(int pos_m, int pos_n)
+{
+	BM[pos_m - 1].SetUp0(pos_n);
+	return *this;
+}
+
+BoolMatrix BoolMatrix::Invert(int pos_m, int pos_n)
+{
+	BM[pos_m - 1].Invert(pos_n);
+	return *this;
+}
+
+BoolMatrix BoolMatrix::SetUp1(int kol, int pos_m, int pos_n)
+{
+	BM[pos_m - 1].SetUp1(kol, pos_n);
+	return *this;
+}
+
+BoolMatrix BoolMatrix::SetUp0(int kol, int pos_m, int pos_n)
+{
+	BM[pos_m - 1].SetUp0(kol, pos_n);
+	return *this;
+}
+
+BoolMatrix BoolMatrix::Invert(int kol, int pos_m, int pos_n)
+{
+	BM[pos_m - 1].Invert(kol, pos_n);
+	return *this;
+}
+
+BoolMatrix BoolMatrix::operator &(BoolMatrix &B)
+{
+	BoolMatrix res;
+	if (m == B.m)
+	{
+		res.m = m; res.n = std::min(n, B.n);
+		for (int line = 0; line < res.m; line++)
+		{
+			res.BM[line] = BM[line] & B.BM[line];
+		}
+	}
+	return res;
+}
+
+BoolMatrix BoolMatrix::operator |(BoolMatrix& B)
+{
+	BoolMatrix res;
+	if (m == B.m)
+	{
+		res.m = m; res.n = std::max(n, B.n);
+		for (int line = 0; line < res.m; line++)
+		{
+			res.BM[line] = BM[line] | B.BM[line];
+		}
+	}
+	return res;
+}
+
+BoolMatrix BoolMatrix::operator ^(BoolMatrix& B)
+{
+	BoolMatrix res;
+	if (m == B.m)
+	{
+		res.m = m; res.n = std::max(n, B.n);
+		for (int line = 0; line < res.m; line++)
+		{
+			res.BM[line] = BM[line] ^ B.BM[line];
+		}
+	}
+	return res;
+}
+
+BoolMatrix & BoolMatrix::operator &=(BoolMatrix& B)
+{
+	if (m == B.m)
+	{
+		n = std::min(n, B.n);
+		for (int line = 0; line < m; line++)
+		{
+			BM[line] &= B.BM[line];
+		}
+	}
+	return *this;
+}
+
+BoolMatrix& BoolMatrix::operator |=(BoolMatrix& B)
+{
+	if (m == B.m)
+	{
+		n = std::max(n, B.n);
+		for (int line = 0; line < m; line++)
+		{
+			BM[line] |= B.BM[line];
+		}
+	}
+	return *this;
+}
+
+BoolMatrix& BoolMatrix::operator ^=(BoolMatrix& B)
+{
+	if (m == B.m)
+	{
+		n = std::max(n, B.n);
+		for (int line = 0; line < m; line++)
+		{
+			BM[line] ^= B.BM[line];
+		}
+	}
+	return *this;
+}
+
+BoolMatrix BoolMatrix::operator ~()
+{
+	for (int line = 0; line < m; line++)
+	{
+		~BM[line];
+	}
+	return *this;
+}
+
+BoolMatrix BoolMatrix::ShiftLeft(int pos_m, int kol)
+{
+	BoolMatrix res(m, n);
+	for (int line = 0; line < m; line++)
+	{
+		res.BM[line] = BM[line];
+	}
+	res.BM[pos_m - 1] << kol;
+	return res;
+}
+
+BoolMatrix BoolMatrix::ShiftRight(int pos_m, int kol)
+{
+	BoolMatrix res(m, n);
+	for (int line = 0; line < m; line++)
+	{
+		res.BM[line] = BM[line];
+	}
+	res.BM[pos_m - 1] >> kol;
+	return res;
+}
+
+BoolMatrix BoolMatrix::ShiftLeftEq(int pos_m, int kol)
+{
+	BM[pos_m - 1] <<= kol;
+	return *this;
+}
+
+BoolMatrix BoolMatrix::ShiftRightEq(int pos_m, int kol)
+{
+	BM[pos_m - 1] >>= kol;
+	return *this;
+}
+
+BoolVector BoolMatrix::Conj()
+{
+	BoolVector res(n);
+	for (int line = 0; line < m; line++)
+	{
+		res &= BM[line];
+	}
+	return res;
+}
+
+BoolVector BoolMatrix::Disj()
+{
+	BoolVector res(n);
+	for (int line = 0; line < m; line++)
+	{
+		res |= BM[line];
+	}
+	return res;
+}
+
+BoolVector BoolMatrix::Xor()
+{
+	BoolVector res(n);
+	for (int line = 0; line < m; line++)
+	{
+		res ^= BM[line];
+	}
+	return res;
+}
+
+std::ostream& operator << (std::ostream& r, BoolMatrix& B)
+{
+	for (int line = 0; line < B.m; line++)
+	{
+		r << B.BM[line];
+	}
+	return r;
+}
+
+std::istream& operator >> (std::istream& r, BoolMatrix& B)
+{
+	for (int line = 0; line < B.m; line++)
+	{
+		r >> B.BM[line];
+	}
+	return r;
+}
